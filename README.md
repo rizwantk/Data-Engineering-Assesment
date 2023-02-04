@@ -1,15 +1,20 @@
 # Data-Engineering-Assesment
-##Calculation of required data and using SQL and System Design
+### Stock Market Data Analysis
+A project to calculate the weekly,monthly,quarterly,yearly average of High, Low, and Volume from stock market data.
 
+### Prerequisites
+- A database management system, such as MySQL or PostgreSQL
+- Stock market data in a table with columns for date, open, high, low,close,Adj close and volume
+- Here's the table schema for the MySQL to store the CSV data:
 
-
-## Design an RDBMS table schema to store the CSV data
-Here's the table schema for the MySQL to store the CSV data:
-
+### Design an RDBMS table schema to store the CSV data
+create a schema and use the schema
 ```sh
 use stock;
 ```
-*Schema name is stock
+
+### SQL Query
+Use the following SQL query to create a table:
 
 ## --Table creation
 ```sh
@@ -26,6 +31,7 @@ CREATE TABLE stock_data (
 ```
 
 ## -- Weekly average
+Use the following SQL query to calculate the weekly average of High, Low, and Volume:
 ```sh
   SELECT 
   DATE_FORMAT(date, '%xW%v') AS week, 
@@ -50,6 +56,7 @@ CREATE TABLE stock_data (
 | 2017W17 | 68.30599975585938 | 67.51800079345703 | 32144660.0000 |
 | ... | ... | ... | ... |
 ## -- Monthly average
+Use the following SQL query to calculate the Monthly average of High, Low, and Volume:
 ```sh
 SELECT 
   DATE_FORMAT(date, '%Y-%m') AS month, 
@@ -75,6 +82,7 @@ GROUP BY DATE_FORMAT(date, '%Y-%m');
 | ... | ... | ... | ... |
 
 ## -- Quarterly average
+Use the following SQL query to calculate the Quarterly average of High, Low, and Volume:
 ```sh
 SELECT 
   extract(year from date) AS year,
@@ -113,6 +121,7 @@ Year | Quarter | avg_high | avg_low | avg_volume
 2022 | 1       | 310.669  | 301.809 | 42383070.5882
 
 ## -- Yearly average
+Use the following SQL query to calculate the Yearly average of High, Low, and Volume:
 ```sh
 SELECT 
   YEAR(date) AS year, 
