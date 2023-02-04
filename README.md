@@ -1,13 +1,16 @@
 # Data-Engineering-Assesment
 ##Calculation of required data and using SQL and System Design
 
-Here's the table schema for the MySQL to store the CSV data:
+
 
 ## Design an RDBMS table schema to store the CSV data
+Here's the table schema for the MySQL to store the CSV data:
 
 ```sh
 use stock;
 ```
+*Schema name is stock
+
 ## --Table creation
 ```sh
 CREATE TABLE stock_data (
@@ -74,15 +77,40 @@ GROUP BY DATE_FORMAT(date, '%Y-%m');
 ## -- Quarterly average
 ```sh
 SELECT 
-  CONCAT(YEAR(date), '-Q', QUARTER(date)) AS quarter, 
+  extract(year from date) AS year,
+  extract(QUARTER from date) AS quarter, 
   AVG(high) AS avg_high, 
   AVG(low) AS avg_low, 
   AVG(volume) AS avg_volume 
 FROM stock_data 
-GROUP BY YEAR(date), QUARTER(date);
+GROUP BY extract(year from date),
+  extract(QUARTER from date);
 
 ```
-**output(Limit 10 only):**
+**output:**
+Year | Quarter | avg_high | avg_low | avg_volume
+---- | ------- | -------- | ------ | ---------
+2017 | 1       | 65.0389  | 64.3714 | 21058700.0000
+2017 | 2       | 69.0282  | 68.1339 | 25081373.0159
+2017 | 3       | 73.4522  | 72.5269 | 20474692.0635
+2017 | 4       | 82.5036  | 81.5120 | 21239353.9683
+2018 | 1       | 92.5382  | 90.4490 | 33617647.5410
+2018 | 2       | 97.7762  | 95.9659 | 27814590.6250
+2018 | 3       | 109.083  | 107.469 | 23908506.3492
+2018 | 4       | 108.823  | 105.555 | 41144304.7619
+2019 | 1       | 109.821  | 107.980 | 29055811.4754
+2019 | 2       | 127.823  | 125.922 | 23630171.4286
+2019 | 3       | 138.560  | 136.318 | 24079792.1875
+2019 | 4       | 147.661  | 145.941 | 21753101.5625
+2020 | 1       | 167.362  | 161.369 | 49334641.9355
+2020 | 2       | 183.631  | 178.986 | 38706593.6508
+2020 | 3       | 212.650  | 207.192 | 34856109.3750
+2020 | 4       | 217.154  | 212.878 | 28122229.6875
+2021 | 1       | 234.408  | 229.626 | 30557121.3115
+2021 | 2       | 255.783  | 252.124 | 24957439.6825
+2021 | 3       | 292.807  | 288.708 | 22918948.4375
+2021 | 4       | 326.682  | 320.910 | 25812223.4375
+2022 | 1       | 310.669  | 301.809 | 42383070.5882
 
 ## -- Yearly average
 ```sh
