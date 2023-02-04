@@ -1,11 +1,11 @@
 # Data-Engineering-Assesment
 ### Stock Market Data Analysis
-A project to calculate the weekly,monthly,quarterly,yearly average of High, Low, and Volume from stock market data.
+A project to calculate the weekly,monthly,quarterly,yearly average of High, Low, and Volume from stock market data(MSFT).
 
 ### Prerequisites
 - A database management system, such as MySQL or PostgreSQL
 - Stock market data in a table with columns for date, open, high, low,close,Adj close and volume
-- Here's the table schema for the MySQL to store the CSV data:
+- Here we are using the Mysql workbench platform for the following calculation.
 
 ### Design an RDBMS table schema to store the CSV data
 create a schema and use the schema
