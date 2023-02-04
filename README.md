@@ -143,7 +143,7 @@ GROUP BY YEAR(date);
 | 2022 | 310.6691158519072 | 301.8094123391544 | 42383070.5882
 
 
-# System Design
+# System Design for Multiple stock trading data
 ### Architecture of Streaming Pipeline:
 
 - Data Ingestion: Apache Kafka or Apache Flume can be used to ingest the real-time stock trading data.
