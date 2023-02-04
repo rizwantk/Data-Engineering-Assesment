@@ -1,11 +1,11 @@
 # Data-Engineering-Assesment
 ### Stock Market Data Analysis
-A project to calculate the weekly,monthly,quarterly,yearly average of High, Low, and Volume from stock market data(MSFT).
+A project to calculate the weekly,monthly,quarterly,yearly average of High, Low, and Volume from stock market data.
 
 ### Prerequisites
 - A database management system, such as MySQL or PostgreSQL
 - Stock market data in a table with columns for date, open, high, low,close,Adj close and volume
-- Here we are using the Mysql workbench platform for the following calculation.
+- Here's the table schema for the MySQL to store the CSV data:
 
 ### Design an RDBMS table schema to store the CSV data
 create a schema and use the schema
@@ -17,7 +17,7 @@ use stock;
 Use the following SQL query to create a table:
 
 ## --Table creation
-```sh
+```SQL
 CREATE TABLE stock_data (
   date DATE NOT NULL,
   open FLOAT NOT NULL,
@@ -32,7 +32,7 @@ CREATE TABLE stock_data (
 
 ## -- Weekly average
 Use the following SQL query to calculate the weekly average of High, Low, and Volume:
-```sh
+```SQL
   SELECT 
   DATE_FORMAT(date, '%xW%v') AS week, 
   AVG(high) AS avg_high, 
@@ -57,7 +57,7 @@ Use the following SQL query to calculate the weekly average of High, Low, and Vo
 | ... | ... | ... | ... |
 ## -- Monthly average
 Use the following SQL query to calculate the Monthly average of High, Low, and Volume:
-```sh
+```SQL
 SELECT 
   DATE_FORMAT(date, '%Y-%m') AS month, 
   AVG(high) AS avg_high, 
@@ -83,7 +83,7 @@ GROUP BY DATE_FORMAT(date, '%Y-%m');
 
 ## -- Quarterly average
 Use the following SQL query to calculate the Quarterly average of High, Low, and Volume:
-```sh
+```SQL
 SELECT 
   extract(year from date) AS year,
   extract(QUARTER from date) AS quarter, 
@@ -122,7 +122,7 @@ Year | Quarter | avg_high | avg_low | avg_volume
 
 ## -- Yearly average
 Use the following SQL query to calculate the Yearly average of High, Low, and Volume:
-```sh
+```SQL
 SELECT 
   YEAR(date) AS year, 
   AVG(high) AS avg_high, 
@@ -141,3 +141,174 @@ GROUP BY YEAR(date);
 | 2020 | 195.4651384315943 | 190.37743079144022 | 37659592.4901
 | 2021 | 278.0180160280258 | 273.43896805293974 | 26012294.0476
 | 2022 | 310.6691158519072 | 301.8094123391544 | 42383070.5882
+
+
+# System Design
+### Architecture of Streaming Pipeline:
+
+- Data Ingestion: Apache Kafka or Apache Flume can be used to ingest the real-time stock trading data.
+
+- Data Processing: Apache Spark Streaming can be used to process the data in real-time and calculate the rolling average for each stock for the past 20 days, 50 days, and 200 days.
+
+- Persistence: Apache Cassandra or Apache HBase can be used to persist the calculated data for later use by APIs.
+
+- API layer: Flask or Django can be used to create a REST API that returns the rolling average/averages of a given stock and whether a stock is above or below a rolling average.
+
+### Justification for the architecture:
+
+- Apache Kafka or Apache Flume: These technologies can handle large amounts of data and provide reliable data ingestion.
+- Apache Spark Streaming: It provides a real-time data processing engine that can handle high-velocity data.
+- Apache Cassandra or Apache HBase: Both of these technologies are optimized for real-time, large-scale data storage and retrieval.
+- Flask or Django: These are popular and widely used frameworks for creating REST APIs.
+
+### 1.Data Ingestion:
+
+- Technology: Apache Kafka
+- Reason for choosing: Apache Kafka is a highly scalable, distributed, and fault-tolerant message broker that is well-suited for collecting and processing high volumes of real-time data.
+- Code Snippet (in Python):
+```python
+from kafka import KafkaConsumer
+
+# Create Kafka consumer
+consumer = KafkaConsumer("stock_trading", bootstrap_servers="localhost:9092")
+
+# Loop over messages in the topic
+for msg in consumer:
+    # Process the message
+    process_message(msg.value)
+```
+##### How this code works:
+- In this code, a Kafka consumer is created to consume messages from the "stock_trading" topic on a Kafka broker running on "localhost:9092".
+- The consumer then loops over the messages in the topic and calls the "process_message" function for each message to process it.
+- The "process_message" function takes the message as input, converts it from bytes to a string, and parses it into the stock symbol, price, and timestamp.
+- The function then calls two other functions: "store_in_database" and "calculate_rolling_averages", to store the stock data in the database and calculate the rolling averages for the stock, respectively.
+
+### 2.Data Processing:
+
+- Technology: Apache Spark Streaming
+- Reason for choosing: Apache Spark Streaming is a fast, scalable, and fault-tolerant stream processing engine that supports real-time data processing and batch processing.
+- Code Snippet (in Python):
+
+```python
+from pyspark import SparkContext
+from pyspark.streaming import StreamingContext
+
+# Create Spark context
+sc = SparkContext(appName="StockTradingStreaming")
+
+# Create Streaming context
+ssc = StreamingContext(sc, batchInterval=1)
+
+# Create DStream from Kafka
+dataStream = KafkaUtils.createStream(ssc, "zookeeper_host:2181", "spark_streaming_group", {topic: 1})
+
+# Calculate rolling average
+rolling_avg = dataStream.window(windowDuration=200, slideDuration=1).mean()
+
+# Persist the calculated data
+rolling_avg.foreachRDD(lambda rdd: rdd.saveAsTextFile("hdfs:///rolling_avg"))
+
+# Start the streaming context
+ssc.start()
+ssc.awaitTermination()
+```
+##### How this code works:
+ - It first creates SparkContext and StreamingContext.
+ - It then creates a DStream from the Kafka topic named 'topic' and specified by the Zookeeper host "zookeeper_host:2181".
+ - It calculates the mean value of the stock data for each sliding window of 200 time steps with a sliding interval of 1 time step.
+ - It persists the calculated rolling average data to HDFS.
+ - Finally, it starts the StreamingContext and awaits termination.
+
+### 3.Data Persistence/Storage:
+
+- Technology: Apache Cassandra
+- Reason for choosing: Apache Cassandra is a highly scalable, distributed, and fault-tolerant NoSQL database that supports real-time data processing and real-time data retrieval.
+- Code Snippet (in Python):
+```python
+from cassandra.cluster import Cluster
+
+# Connect to Cassandra cluster
+cluster = Cluster(["localhost"])
+session = cluster.connect("stock_trading")
+
+# Insert data into Cassandra
+session.execute("INSERT INTO rolling_avg (stock_symbol, avg_20, avg_50, avg_200) VALUES (%s, %s, %s, %s)", (stock_symbol, avg_20, avg_50, avg_200))
+```
+##### How this code works:
+- This code connects to a Cassandra database called "stock_trading" running on "localhost" and inserts data into the "rolling_avg" table. 
+- The data to be inserted includes the "stock_symbol", and the rolling averages for 20, 50, and 200 days, represented by "avg_20", "avg_50", and "avg_200" respectively. The data is passed as parameters to the "execute" method, which inserts the data into the table.
+
+### 4.API layer:
+
+- Technology: Flask (with Apache Cassandra as the database)
+- Reason for choosing: Flask is a lightweight and flexible web framework that provides a simple way to build RESTAPIs. It can easily integrate with Apache Cassandra to retrieve data and make it accessible through API endpoints.
+- Code Snippet (in Python):
+
+```python
+from flask import Flask, jsonify
+
+app = Flask(__name__)
+
+@app.route("/rolling_avg/<stock_symbol>")
+def get_rolling_avg(stock_symbol):
+    # Retrieve rolling average from database
+    avg_20, avg_50, avg_200 = retrieve_rolling_avg(stock_symbol)
+    
+    # Return the rolling average as JSON
+    return jsonify(avg_20=avg_20, avg_50=avg_50, avg_200=avg_200)
+
+if __name__ == "__main__":
+    app.run(debug=True)
+
+```
+##### How this code works:
+This code is a Flask web application that provides an API endpoint to retrieve the rolling average of a stock symbol.
+ - The "Flask" module is imported and a new "Flask" application is created.
+ - The "retrieve_rolling_avg" function is defined to retrieve the rolling average for a given stock symbol from a database. The implementation details are not provided in the code.
+ - A route is defined using the "@app.route" decorator with a URL path of "/rolling_avg/<stock_symbol>". The "get_rolling_avg" function handles this route and calls the "retrieve_rolling_avg" function to retrieve the rolling average for the given stock symbol.
+ - The rolling average is returned as a JSON object using the "jsonify" function from the "Flask" module.
+ - The " if __name__ == "__main__": " block runs the Flask application in debug mode.
+ - This code provides a REST API endpoint that takes a stock symbol as input and returns the rolling average of that stock symbol in JSON format.
+
+### output:
+The output of the pipeline would be the rolling average of the trading data for each stock calculated over the past 20 days, 50 days, and 200 days. This data would be persisted in a database of choice (e.g. Apache Cassandra) and could be retrieved by a front-end API (e.g. built using Flask) that would return the rolling averages for a given stock and whether a stock is above or below a rolling average.
+
+
+### AAPL(rolling average):
+the API endpoint is "/rolling_avg/AAPL ", it might return a JSON response :
+```json
+{
+    "avg_20": 123.45,
+    "avg_50": 234.56,
+    "avg_200": 345.67,
+    "is_above_avg_20": true,
+    "is_above_avg_50": false,
+    "is_above_avg_200": true
+}
+```
+where "avg_20", "avg_50", and "avg_200" are the rolling averages over the past 20 days, 50 days, and 200 days respectively, and "is_above_avg_20", "is_above_avg_50", and "is_above_avg_200" indicate whether the stock is above or below the respective rolling average.
+
+
+### MSFT(rolling average):
+the API endpoint is /rolling_avg/MSFT, it might return a JSON response :
+```json
+{
+    "avg_20": 111.11,
+    "avg_50": 222.22,
+    "avg_200": 333.33,
+    "is_above_avg_20": false,
+    "is_above_avg_50": true,
+    "is_above_avg_200": false
+}
+```
+where "avg_20", "avg_50", and "avg_200" are the rolling averages over the past 20 days, 50 days, and 200 days respectively, and "is_above_avg_20", "is_above_avg_50", and "is_above_avg_200" indicate whether the stock (MSFT in this case) is above or below the respective rolling average.
+
+
+## Conclusions:
+This is just a high-level overview of the code that could be used for each stage of the pipeline.
+
+ **The input data format of the code is a stock symbol passed as a URL parameter in the API endpoint. For example, if you make a GET request to the endpoint /rolling_avg/AAPL, the stock symbol AAPL is passed to the function get_rolling_avg as an argument.** 
+
+The code then retrieves the rolling averages for the specified stock symbol from the database and returns it as a JSON response. 
+
+ **The output of this code would be a  JSON response  that contains the rolling average of a given stock. The response includes the stock symbol, 20-day rolling average, 50-day rolling average, and 200-day rolling average. The JSON response is returned from the get_rolling_average function when the API endpoint "/rolling_average/<symbol>" is called with a GET request, where <symbol> is the stock symbol you want to retrieve the rolling average for.**
