@@ -309,6 +309,7 @@ This is the analysis of stock prices of different stocks over a period of time. 
 only showing top 10 rows
 
 plot:
+![download](https://user-images.githubusercontent.com/94526342/216812164-ba001aaf-6d6b-4290-97a4-14b3e5b2a1f5.png)
 
 ##### How this code works:
  - This program calculates the 20-day, 50-day, and 200-day rolling averages for stock prices. It reads stock trading data from a Kafka topic, parses the messages into stock symbol, price, and timestamp, and then performs aggregations to calculate the rolling averages.
@@ -425,6 +426,7 @@ The output would depend on the data in the Cassandra database, specifically the 
  the output of the "/rolling_average/AAPL" endpoint would be a JSON response,
 ```json
 {
+    "price": 143.970001
     "20_day_rolling_avg": 143.970001,
     "50_day_rolling_avg": 143.970001,
     "200_day_rolling_avg": 143.970001
