@@ -435,9 +435,9 @@ The output would depend on the data in the Cassandra database, specifically the 
 And, the output of the "/stock_status/AAPL" endpoint would be a JSON response is,
 ```json
 {
-    "20_day_rolling_avg_status": "Above",
-    "50_day_rolling_avg_status": "Above",
-    "200_day_rolling_avg_status": "Above"
+    "20_day_rolling_avg_status": "Below",
+    "50_day_rolling_avg_status": "Below",
+    "200_day_rolling_avg_status": "Below"
 }
 ```
 
