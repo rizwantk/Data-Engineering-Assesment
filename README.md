@@ -389,7 +389,7 @@ session.set_keyspace('stock_trading_analysis')
 
 @app.route("/rolling_average/AAPL")
 def get_rolling_average(stock_symbol):
-    query = "SELECT date,price,avg_20_days, avg_50_days, avg_200_days FROM stock_rolling_averages WHERE stock_symbol='{}'".format(stock_symbol)
+    query = "SELECT date,price,avg_20_days, avg_50_days, avg_200_days FROM stock_rolling_averages WHERE stock_symbol='{}' and date > '01-02-2023'".format(stock_symbol)
     result = session.execute(query)
     result_dict = {"date":result[0][0],"price":result[0][1],"20_day_rolling_avg": result[0][2], "50_day_rolling_avg": result[0][3], "200_day_rolling_avg": result[0][4]}
     return jsonify(result_dict)
@@ -417,6 +417,7 @@ def get_stock_status(stock_symbol):
 if __name__ == '__main__':
     app.run(debug=True)
 
+
 ```
 ##### How this code works:
 This code is a Flask web application that provides an API endpoint to retrieve the rolling average of a stock symbol.
@@ -431,7 +432,7 @@ The output would depend on the data in the Cassandra database, specifically the 
  the output of the "/rolling_average/AAPL" endpoint would be a JSON response,
 ```json
 {
-    "date": "01-02-2023", 
+    "date": "2023-02-01", 
     "price": 143.97,
     "20_day_rolling_avg": 143.97,
     "50_day_rolling_avg": 143.97,
