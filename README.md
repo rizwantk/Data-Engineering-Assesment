@@ -153,7 +153,7 @@ GROUP BY YEAR(date);
 - Persistence: Apache Cassandra or Apache HBase can be used to persist the calculated data for later use by APIs.
 
 - API layer: Flask or Django can be used to create a REST API that returns the rolling average/averages of a given stock and whether a stock is above or below a rolling average.
-
+![systemdesign](https://user-images.githubusercontent.com/94526342/216803854-924a1443-f95b-4e3a-b869-1af5b6cb04cd.png)
 ### Justification for the architecture:
 
 - Apache Kafka or Apache Flume: These technologies can handle large amounts of data and provide reliable data ingestion.
