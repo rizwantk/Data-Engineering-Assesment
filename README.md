@@ -256,11 +256,11 @@ parsed_df = df.selectExpr("CAST(value AS STRING)", "timestamp") \
   .selectExpr("col[0] as stock_symbol", "col[1] as price", "timestamp")
 
 # Calculate the 20-day, 50-day, and 200-day rolling averages for each stock
-rolling_avg_df = parsed_df \
-  .groupBy("stock_symbol") \
-  .agg(avg(parsed_df["price"]).over(window(parsed_df["timestamp"], "20 days")).alias("avg_20_days")) \
-  .agg(avg(parsed_df["price"]).over(window(parsed_df["timestamp"], "50 days")).alias("avg_50_days")) \
-  .agg(avg(parsed_df["price"]).over(window(parsed_df["timestamp"], "200 days")).alias("avg_200_days"))
+rolling_avg_df = parsed_df
+.groupBy("stock_symbol")
+.agg(round(avg(parsed_df["price"]), 2).over(window(parsed_df["timestamp"], "20 days")).alias("avg_20_days"))
+.agg(round(avg(parsed_df["price"]), 2).over(window(parsed_df["timestamp"], "50 days")).alias("avg_50_days"))
+.agg(round(avg(parsed_df["price"]), 2).over(window(parsed_df["timestamp"], "200 days")).alias("avg_200_days"))).limit(10)
 
 result_df = rolling_avg_df.selectExpr("stock_symbol", "price", "CASE WHEN price > avg_20_days THEN 'Above' ELSE 'Below' END as avg_20_days", "CASE WHEN price > avg_50_days THEN 'Above' ELSE 'Below' END as avg_50_days", "CASE WHEN price > avg_200_days THEN 'Above' ELSE 'Below' END as avg_200_days")
 
@@ -300,15 +300,16 @@ This is the analysis of stock prices of different stocks over a period of time. 
 
 | Stock Symbol | Price | Date | 20-day Average | 50-day Average | 200-day Average | 20-day Above | 50-day Above | 200-day Above |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| AAPL | 143.970001 | 01-02-2023 | 143.970001 | 143.970001 | 143.970001 | false | false | false |
-| AAPL | 164.699997 | 01-03-2022 | 154.33499899999998 | 154.33499899999998 | 154.33499899999998 | true | true | true |
-| AAPL | 174.029999 | 01-04-2022 | 160.89999899999998 | 160.89999899999998 | 160.89999899999998 | true | true | true |
-| AAPL | 149.899994 | 01-06-2022 | 158.14999774999998 | 158.14999774999998 | 158.14999774999998 | false | false | false |
-| AAPL | 136.039993 | 01-07-2022 | 153.72799679999997 | 153.72799679999997 | 153.72799679999997 | false | false | false |
-| AAPL | 161.009995 | 01-08-2022 | 154.94166316666664 | 154.94166316666664 | 154.94166316666664 | true | true | true |
-| AAPL | 156.639999 | 01-09-2022 | 155.18428257142855 | 155.18428257142855 | 155.18428257142855 | true | true | true |
-| AAPL | 155.080002 | 01-11-2022 | 155.17124749999996 | 155.17124749999996 | 155.17124749999996 | false | false | false |
-| AAPL | 148.210007 | 01-12-2022 | 154.3977763333333 | 154.3977763333333 | 154.3977763333333 | false | false | false |
+|        AAPL|143.97|01-02-2023|        143.97|        143.97|         143.97|       false|       false|        false|
+|        AAPL|164.70|01-03-2022|        154.33|        154.33|         154.33|        true|        true|         true|
+|        AAPL|174.03|01-04-2022|        160.90|         160.90|        160.90|        true|        true|         true|
+|        AAPL|149.90|01-06-2022|        158.15|        158.15|         158.15|       false|       false|        false|
+|        AAPL|136.04|01-07-2022|        153.73|        153.73|         153.73|       false|       false|        false|
+|        AAPL|161.01|01-08-2022|        154.94|        154.94|         154.94|        true|        true|         true|
+|        AAPL|156.64|01-09-2022|        155.18|        155.18|         155.18|        true|        true|         true|
+|        AAPL|155.08|01-11-2022|        155.17|        155.17|         155.17|       false|       false|        false|
+|        AAPL|148.21|01-12-2022|        154.40|        154.40|         154.40|       false|       false|        false|
+|        AAPL|148.90|02-02-2023|        153.85|        153.85|         153.85|       false|       false|        false
 
 only showing top 10 rows
 
@@ -388,9 +389,9 @@ session.set_keyspace('stock_trading_analysis')
 
 @app.route("/rolling_average/AAPL")
 def get_rolling_average(stock_symbol):
-    query = "SELECT avg_20_days, avg_50_days, avg_200_days FROM stock_rolling_averages WHERE stock_symbol='{}'".format(stock_symbol)
+    query = "SELECT date,price,avg_20_days, avg_50_days, avg_200_days FROM stock_rolling_averages WHERE stock_symbol='{}'".format(stock_symbol)
     result = session.execute(query)
-    result_dict = {"20_day_rolling_avg": result[0][0], "50_day_rolling_avg": result[0][1], "200_day_rolling_avg": result[0][2]}
+    result_dict = {"date":result[0][0],"price":result[0][1],"20_day_rolling_avg": result[0][2], "50_day_rolling_avg": result[0][3], "200_day_rolling_avg": result[0][4]}
     return jsonify(result_dict)
 
 @app.route("/stock_status/AAPL")
@@ -430,10 +431,11 @@ The output would depend on the data in the Cassandra database, specifically the 
  the output of the "/rolling_average/AAPL" endpoint would be a JSON response,
 ```json
 {
-    "price": 143.970001
-    "20_day_rolling_avg": 143.970001,
-    "50_day_rolling_avg": 143.970001,
-    "200_day_rolling_avg": 143.970001
+    "date": "01-02-2023", 
+    "price": 143.97,
+    "20_day_rolling_avg": 143.97,
+    "50_day_rolling_avg": 143.97,
+    "200_day_rolling_avg": 143.97
 }
 ```
 And, the output of the "/stock_status/AAPL" endpoint would be a JSON response is,
