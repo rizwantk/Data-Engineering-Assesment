@@ -281,6 +281,35 @@ query = result_df \
 query.awaitTermination()
 
 ```
+#### output(AAPL only):
+This is the analysis of stock prices of different stocks over a period of time. The following table shows the data for a specific stock (AAPL in this case) with the following columns:
+
+- stock_symbol: Symbol of the stock
+- price: Price of the stock on a specific date
+- date: Date of the stock price
+- 20_day_average: Average of the stock price for the past 20 days
+- 50_day_average: Average of the stock price for the past 50 days
+- 200_day_average: Average of the stock price for the past 200 days
+- 20_day_above: Whether the current stock price is above the 20-day average or not
+- 50_day_above: Whether the current stock price is above the 50-day average or not
+- 200_day_above: Whether the current stock price is above the 200-day average or not
+
+| Stock Symbol | Price | Date | 20-day Average | 50-day Average | 200-day Average | 20-day Above | 50-day Above | 200-day Above |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| AAPL | 143.970001 | 01-02-2023 | 143.970001 | 143.970001 | 143.970001 | false | false | false |
+| AAPL | 164.699997 | 01-03-2022 | 154.33499899999998 | 154.33499899999998 | 154.33499899999998 | true | true | true |
+| AAPL | 174.029999 | 01-04-2022 | 160.89999899999998 | 160.89999899999998 | 160.89999899999998 | true | true | true |
+| AAPL | 149.899994 | 01-06-2022 | 158.14999774999998 | 158.14999774999998 | 158.14999774999998 | false | false | false |
+| AAPL | 136.039993 | 01-07-2022 | 153.72799679999997 | 153.72799679999997 | 153.72799679999997 | false | false | false |
+| AAPL | 161.009995 | 01-08-2022 | 154.94166316666664 | 154.94166316666664 | 154.94166316666664 | true | true | true |
+| AAPL | 156.639999 | 01-09-2022 | 155.18428257142855 | 155.18428257142855 | 155.18428257142855 | true | true | true |
+| AAPL | 155.080002 | 01-11-2022 | 155.17124749999996 | 155.17124749999996 | 155.17124749999996 | false | false | false |
+| AAPL | 148.210007 | 01-12-2022 | 154.3977763333333 | 154.3977763333333 | 154.3977763333333 | false | false | false |
+
+only showing top 10 rows
+
+plot:
+
 ##### How this code works:
  - This program calculates the 20-day, 50-day, and 200-day rolling averages for stock prices. It reads stock trading data from a Kafka topic, parses the messages into stock symbol, price, and timestamp, and then performs aggregations to calculate the rolling averages.
  - The results are displayed in a plot and written to the console. The program uses the Spark library to process the data in a scalable and efficient manner.
@@ -396,9 +425,9 @@ The output would depend on the data in the Cassandra database, specifically the 
  the output of the "/rolling_average/AAPL" endpoint would be a JSON response,
 ```json
 {
-    "20_day_rolling_avg": 100,
-    "50_day_rolling_avg": 90,
-    "200_day_rolling_avg": 95
+    "20_day_rolling_avg": 143.970001,
+    "50_day_rolling_avg": 143.970001,
+    "200_day_rolling_avg": 143.970001
 }
 ```
 And, the output of the "/stock_status/AAPL" endpoint would be a JSON response is,
@@ -410,40 +439,6 @@ And, the output of the "/stock_status/AAPL" endpoint would be a JSON response is
 }
 ```
 
-### GOOG:
- the output of the "/rolling_average/GOOG" endpoint would be a JSON response,
-```json
-{
-    "20_day_rolling_avg": 100,
-    "50_day_rolling_avg": 90,
-    "200_day_rolling_avg": 95
-}
-```
-And, the output of the "/stock_status/GOOG" endpoint would be a JSON response is,
-```json
-{
-    "20_day_rolling_avg_status": "Above",
-    "50_day_rolling_avg_status": "Above",
-    "200_day_rolling_avg_status": "Above"
-}
-```
-### MSFT:
- the output of the "/rolling_average/MSFT" endpoint would be a JSON response,
-```json
-{
-    "20_day_rolling_avg": 100,
-    "50_day_rolling_avg": 90,
-    "200_day_rolling_avg": 95
-}
-```
-And, the output of the "/stock_status/MSFT" endpoint would be a JSON response is,
-```json
-{
-    "20_day_rolling_avg_status": "Above",
-    "50_day_rolling_avg_status": "Above",
-    "200_day_rolling_avg_status": "Above"
-}
-```
 
 
 ## Conclusions:
