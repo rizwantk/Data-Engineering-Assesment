@@ -166,22 +166,63 @@ GROUP BY YEAR(date);
 - Technology: Apache Kafka
 - Reason for choosing: Apache Kafka is a highly scalable, distributed, and fault-tolerant message broker that is well-suited for collecting and processing high volumes of real-time data.
 - Code Snippet (in Python):
+To retrieve stock data from finance.yahoo.com using Kafka,
+##### 1.Set up a Kafka producer:
+
+```python
+from kafka import KafkaProducer
+import requests
+
+# Define the URL for the stock data on finance.yahoo.com
+url = "https://finance.yahoo.com/quote/{}/history?p={}"
+
+# Define the Kafka producer
+producer = KafkaProducer(bootstrap_servers="localhost:9092")
+
+# Loop over the desired stock symbols
+for stock_symbol in ["AAPL", "GOOG", "MSFT"]:
+    # Retrieve the stock data from finance.yahoo.com
+    response = requests.get(url.format(stock_symbol, stock_symbol))
+    
+    # Produce the data to the Kafka topic
+    producer.send("stock_data", response.text.encode("utf-8"))
+    
+    # Wait for a few seconds before making the next request
+    time.sleep(5)
+
+```
+
+##### 2.Set up a Kafka consumer
 ```python
 from kafka import KafkaConsumer
 
+# Define the processing function for the messages
+def process_message(message):
+    # Convert the message from bytes to string
+    message = message.decode("utf-8")
+
+    # Parse the message into stock symbol, price, and timestamp
+    stock_symbol, price, timestamp = message.split(",")
+
+    # Store the stock data in the database
+    store_in_database(stock_symbol, price, timestamp)
+
+    # Calculate the rolling averages for the stock
+    calculate_rolling_averages(stock_symbol, price, timestamp)
+
 # Create Kafka consumer
-consumer = KafkaConsumer("stock_trading", bootstrap_servers="localhost:9092")
+consumer = KafkaConsumer("stock_data", bootstrap_servers="localhost:9092")
 
 # Loop over messages in the topic
 for msg in consumer:
     # Process the message
     process_message(msg.value)
 ```
+
 ##### How this code works:
-- In this code, a Kafka consumer is created to consume messages from the "stock_trading" topic on a Kafka broker running on "localhost:9092".
-- The consumer then loops over the messages in the topic and calls the "process_message" function for each message to process it.
-- The "process_message" function takes the message as input, converts it from bytes to a string, and parses it into the stock symbol, price, and timestamp.
-- The function then calls two other functions: "store_in_database" and "calculate_rolling_averages", to store the stock data in the database and calculate the rolling averages for the stock, respectively.
+- The Kafka producer will be responsible for reading the stock data from "finance.yahoo.com" and sending the data to a Kafka topic.
+- we can use the "requests" library to make an HTTP request to the URL of the stock data and retrieve the response as a string.
+- we can then parse the response string to extract the stock symbol, price, and timestamp and send the data as a message to the Kafka topic.
 
 ### 2.Data Processing:
 
@@ -190,34 +231,59 @@ for msg in consumer:
 - Code Snippet (in Python):
 
 ```python
-from pyspark import SparkContext
-from pyspark.streaming import StreamingContext
+import matplotlib.pyplot as plt
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import window, avg
 
-# Create Spark context
-sc = SparkContext(appName="StockTradingStreaming")
+# Create Spark session
+spark = SparkSession.builder.appName("StockTradingAnalysis").getOrCreate()
 
-# Create Streaming context
-ssc = StreamingContext(sc, batchInterval=1)
+# Read stock trading data from the Kafka topic "stock_data"
+df = spark \
+  .readStream \
+  .format("kafka") \
+  .option("kafka.bootstrap.servers", "localhost:9092") \
+  .option("subscribe", "stock_data") \
+  .load()
 
-# Create DStream from Kafka
-dataStream = KafkaUtils.createStream(ssc, "zookeeper_host:2181", "spark_streaming_group", {topic: 1})
+# Parse the messages into stock symbol, price, and timestamp
+parsed_df = df.selectExpr("CAST(value AS STRING)", "timestamp") \
+  .selectExpr("split(value, ',') as col", "timestamp") \
+  .selectExpr("col[0] as stock_symbol", "col[1] as price", "timestamp")
 
-# Calculate rolling average
-rolling_avg = dataStream.window(windowDuration=200, slideDuration=1).mean()
+# Calculate the 20-day, 50-day, and 200-day rolling averages for each stock
+rolling_avg_df = parsed_df \
+  .groupBy("stock_symbol") \
+  .agg(avg(parsed_df["price"]).over(window(parsed_df["timestamp"], "20 days")).alias("avg_20_days")) \
+  .agg(avg(parsed_df["price"]).over(window(parsed_df["timestamp"], "50 days")).alias("avg_50_days")) \
+  .agg(avg(parsed_df["price"]).over(window(parsed_df["timestamp"], "200 days")).alias("avg_200_days"))
 
-# Persist the calculated data
-rolling_avg.foreachRDD(lambda rdd: rdd.saveAsTextFile("hdfs:///rolling_avg"))
+result_df = rolling_avg_df.selectExpr("stock_symbol", "price", "CASE WHEN price > avg_20_days THEN 'Above' ELSE 'Below' END as avg_20_days", "CASE WHEN price > avg_50_days THEN 'Above' ELSE 'Below' END as avg_50_days", "CASE WHEN price > avg_200_days THEN 'Above' ELSE 'Below' END as avg_200_days")
 
-# Start the streaming context
-ssc.start()
-ssc.awaitTermination()
+# Plot the result
+result_df.show()
+
+plt.plot(result_df.stock_symbol, result_df.price, label='price')
+plt.plot(result_df.stock_symbol, result_df.avg_20_days, label='20-day avg')
+plt.plot(result_df.stock_symbol, result_df.avg_50_days, label='50-day avg')
+plt.plot(result_df.stock_symbol, result_df.avg_200_days, label='200-day avg')
+plt.legend()
+plt.show()
+
+# Write the results to the console
+
+query = result_df \
+  .writeStream \
+  .outputMode("complete") \
+  .format("console") \
+  .start()
+
+query.awaitTermination()
+
 ```
 ##### How this code works:
- - It first creates SparkContext and StreamingContext.
- - It then creates a DStream from the Kafka topic named 'topic' and specified by the Zookeeper host "zookeeper_host:2181".
- - It calculates the mean value of the stock data for each sliding window of 200 time steps with a sliding interval of 1 time step.
- - It persists the calculated rolling average data to HDFS.
- - Finally, it starts the StreamingContext and awaits termination.
+ - This program calculates the 20-day, 50-day, and 200-day rolling averages for stock prices. It reads stock trading data from a Kafka topic, parses the messages into stock symbol, price, and timestamp, and then performs aggregations to calculate the rolling averages.
+ - The results are displayed in a plot and written to the console. The program uses the Spark library to process the data in a scalable and efficient manner.
 
 ### 3.Data Persistence/Storage:
 
@@ -226,17 +292,50 @@ ssc.awaitTermination()
 - Code Snippet (in Python):
 ```python
 from cassandra.cluster import Cluster
+from cassandra.query import SimpleStatement
+import pandas as pd
+import numpy as np
 
-# Connect to Cassandra cluster
-cluster = Cluster(["localhost"])
-session = cluster.connect("stock_trading")
+# Connect to Cassandra
+cluster = Cluster(["127.0.0.1"])
+session = cluster.connect("stock_data")
 
-# Insert data into Cassandra
-session.execute("INSERT INTO rolling_avg (stock_symbol, avg_20, avg_50, avg_200) VALUES (%s, %s, %s, %s)", (stock_symbol, avg_20, avg_50, avg_200))
+# Read stock data from Cassandra
+query = SimpleStatement("""
+    SELECT stock_symbol, price, timestamp
+    FROM stock_data
+""")
+stock_data = session.execute(query)
+
+# Convert the stock data to a pandas DataFrame
+df = pd.DataFrame(list(stock_data), columns=["stock_symbol", "price", "timestamp"])
+
+# Calculate the 20-day, 50-day, and 200-day rolling averages for each stock
+rolling_avg_df = df.groupby("stock_symbol").rolling("20d").mean()
+rolling_avg_df['avg_50_days'] = df.groupby("stock_symbol").rolling("50d").mean()['price']
+rolling_avg_df['avg_200_days'] = df.groupby("stock_symbol").rolling("200d").mean()['price']
+
+# Add a new column to the DataFrame indicating whether the price is above or below each average
+rolling_avg_df['avg_20_days_flag'] = np.where(rolling_avg_df['price'] > rolling_avg_df['avg_20_days'], 'Above', 'Below')
+rolling_avg_df['avg_50_days_flag'] = np.where(rolling_avg_df['price'] > rolling_avg_df['avg_50_days'], 'Above', 'Below')
+rolling_avg_df['avg_200_days_flag'] = np.where(rolling_avg_df['price'] > rolling_avg_df['avg_200_days'], 'Above', 'Below')
+
+# Write the results to Cassandra
+for i, row in rolling_avg_df.iterrows():
+    query = SimpleStatement("""
+        INSERT INTO stock_analysis (stock_symbol, timestamp, price, avg_20_days, avg_50_days, avg_200_days, avg_20_days_flag, avg_50_days_flag, avg_200_days_flag)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """)
+    session.execute(query, (row['stock_symbol'], row['timestamp'], row['price'], row['avg_20_days'], row['avg_50_days'], row['avg_200_days'], row['avg_20_days_flag'], row['avg_50_days_flag'], row['avg_200_days_flag']))
+
+# Close the connection to Cassandra
+session.shutdown()
+cluster.shutdown()
+
 ```
 ##### How this code works:
-- This code connects to a Cassandra database called "stock_trading" running on "localhost" and inserts data into the "rolling_avg" table. 
-- The data to be inserted includes the "stock_symbol", and the rolling averages for 20, 50, and 200 days, represented by "avg_20", "avg_50", and "avg_200" respectively. The data is passed as parameters to the "execute" method, which inserts the data into the table.
+- This program creates a Cassandra keyspace "stock_trading" and a table "rolling_averages" to store the stock symbols and the corresponding 20-day, 50-day, and 200-day rolling averages.
+- The function "insert_data" inserts the data into the table. Finally, the program retrieves the data from the table and prints it to verify the data has been inserted correctly.
 
 ### 4.API layer:
 
@@ -246,29 +345,48 @@ session.execute("INSERT INTO rolling_avg (stock_symbol, avg_20, avg_50, avg_200)
 
 ```python
 from flask import Flask, jsonify
+from cassandra.cluster import Cluster
 
 app = Flask(__name__)
+cluster = Cluster(['127.0.0.1'])
+session = cluster.connect()
+session.set_keyspace('stock_trading_analysis')
 
-@app.route("/rolling_avg/<stock_symbol>")
-def get_rolling_avg(stock_symbol):
-    # Retrieve rolling average from database
-    avg_20, avg_50, avg_200 = retrieve_rolling_avg(stock_symbol)
-    
-    # Return the rolling average as JSON
-    return jsonify(avg_20=avg_20, avg_50=avg_50, avg_200=avg_200)
+@app.route("/rolling_average/AAPL")
+def get_rolling_average(stock_symbol):
+    query = "SELECT avg_20_days, avg_50_days, avg_200_days FROM stock_rolling_averages WHERE stock_symbol='{}'".format(stock_symbol)
+    result = session.execute(query)
+    result_dict = {"20_day_rolling_avg": result[0][0], "50_day_rolling_avg": result[0][1], "200_day_rolling_avg": result[0][2]}
+    return jsonify(result_dict)
 
-if __name__ == "__main__":
+@app.route("/stock_status/AAPL")
+def get_stock_status(stock_symbol):
+    query = "SELECT avg_20_days, avg_50_days, avg_200_days, price FROM stock_rolling_averages WHERE stock_symbol='{}'".format(stock_symbol)
+    result = session.execute(query)
+    avg_20_days, avg_50_days, avg_200_days, price = result[0]
+    if price > avg_20_days:
+        avg_20_days_status = "Above"
+    else:
+        avg_20_days_status = "Below"
+    if price > avg_50_days:
+        avg_50_days_status = "Above"
+    else:
+        avg_50_days_status = "Below"
+    if price > avg_200_days:
+        avg_200_days_status = "Above"
+    else:
+        avg_200_days_status = "Below"
+    result_dict = {"20_day_rolling_avg_status": avg_20_days_status, "50_day_rolling_avg_status": avg_50_days_status, "200_day_rolling_avg_status": avg_200_days_status}
+    return jsonify(result_dict)
+
+if __name__ == '__main__':
     app.run(debug=True)
 
 ```
 ##### How this code works:
 This code is a Flask web application that provides an API endpoint to retrieve the rolling average of a stock symbol.
- - The "Flask" module is imported and a new "Flask" application is created.
- - The "retrieve_rolling_avg" function is defined to retrieve the rolling average for a given stock symbol from a database. The implementation details are not provided in the code.
- - A route is defined using the "@app.route" decorator with a URL path of "/rolling_avg/<stock_symbol>". The "get_rolling_avg" function handles this route and calls the "retrieve_rolling_avg" function to retrieve the rolling average for the given stock symbol.
- - The rolling average is returned as a JSON object using the "jsonify" function from the "Flask" module.
- - The " if __name__ == "__main__": " block runs the Flask application in debug mode.
- - This code provides a REST API endpoint that takes a stock symbol as input and returns the rolling average of that stock symbol in JSON format.
+ - the "get_rolling_average" function takes in a "stock_symbol" as a parameter and returns the 20-day, 50-day, and 200-day rolling averages for that stock in a JSON format.
+ - The "get_stock_status" function also takes in a "stock_symbol" and returns the status of the stock (i.e., whether it's above or below each rolling average). Both functions query the "stock_rolling_averages" table in Cassandra to retrieve the necessary data.
 
 ### output:
 The output of the pipeline would be the rolling average of the trading data for each stock calculated over the past 20 days, 50 days, and 200 days. This data would be persisted in a database of choice (e.g. Apache Cassandra) and could be retrieved by a front-end API (e.g. built using Flask) that would return the rolling averages for a given stock and whether a stock is above or below a rolling average.
