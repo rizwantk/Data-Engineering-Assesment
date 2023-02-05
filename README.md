@@ -174,7 +174,7 @@ from kafka import KafkaProducer
 import requests
 
 # Define the URL for the stock data on finance.yahoo.com
-url = "https://finance.yahoo.com/quote/{}/history?p={}"
+url = "https://finance.yahoo.com/quote/AAPL/history/"
 
 # Define the Kafka producer
 producer = KafkaProducer(bootstrap_servers="localhost:9092")
