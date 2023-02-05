@@ -389,44 +389,62 @@ This code is a Flask web application that provides an API endpoint to retrieve t
  - The "get_stock_status" function also takes in a "stock_symbol" and returns the status of the stock (i.e., whether it's above or below each rolling average). Both functions query the "stock_rolling_averages" table in Cassandra to retrieve the necessary data.
 
 ### output:
-The output of the pipeline would be the rolling average of the trading data for each stock calculated over the past 20 days, 50 days, and 200 days. This data would be persisted in a database of choice (e.g. Apache Cassandra) and could be retrieved by a front-end API (e.g. built using Flask) that would return the rolling averages for a given stock and whether a stock is above or below a rolling average.
+The output would depend on the data in the Cassandra database, specifically the "stock_rolling_averages" table,
 
 
-### AAPL(rolling average):
-the API endpoint is "/rolling_avg/AAPL ", it might return a JSON response :
+### AAPL:
+ the output of the "/rolling_average/AAPL" endpoint would be a JSON response,
 ```json
 {
-    "avg_20": 123.45,
-    "avg_50": 234.56,
-    "avg_200": 345.67,
-    "is_above_avg_20": true,
-    "is_above_avg_50": false,
-    "is_above_avg_200": true
+    "20_day_rolling_avg": 100,
+    "50_day_rolling_avg": 90,
+    "200_day_rolling_avg": 95
 }
 ```
-where "avg_20", "avg_50", and "avg_200" are the rolling averages over the past 20 days, 50 days, and 200 days respectively, and "is_above_avg_20", "is_above_avg_50", and "is_above_avg_200" indicate whether the stock is above or below the respective rolling average.
-
-
-### MSFT(rolling average):
-the API endpoint is /rolling_avg/MSFT, it might return a JSON response :
+And, the output of the "/stock_status/AAPL" endpoint would be a JSON response is,
 ```json
 {
-    "avg_20": 111.11,
-    "avg_50": 222.22,
-    "avg_200": 333.33,
-    "is_above_avg_20": false,
-    "is_above_avg_50": true,
-    "is_above_avg_200": false
+    "20_day_rolling_avg_status": "Above",
+    "50_day_rolling_avg_status": "Above",
+    "200_day_rolling_avg_status": "Above"
 }
 ```
-where "avg_20", "avg_50", and "avg_200" are the rolling averages over the past 20 days, 50 days, and 200 days respectively, and "is_above_avg_20", "is_above_avg_50", and "is_above_avg_200" indicate whether the stock (MSFT in this case) is above or below the respective rolling average.
+
+### GOOG:
+ the output of the "/rolling_average/GOOG" endpoint would be a JSON response,
+```json
+{
+    "20_day_rolling_avg": 100,
+    "50_day_rolling_avg": 90,
+    "200_day_rolling_avg": 95
+}
+```
+And, the output of the "/stock_status/GOOG" endpoint would be a JSON response is,
+```json
+{
+    "20_day_rolling_avg_status": "Above",
+    "50_day_rolling_avg_status": "Above",
+    "200_day_rolling_avg_status": "Above"
+}
+```
+### MSFT:
+ the output of the "/rolling_average/MSFT" endpoint would be a JSON response,
+```json
+{
+    "20_day_rolling_avg": 100,
+    "50_day_rolling_avg": 90,
+    "200_day_rolling_avg": 95
+}
+```
+And, the output of the "/stock_status/MSFT" endpoint would be a JSON response is,
+```json
+{
+    "20_day_rolling_avg_status": "Above",
+    "50_day_rolling_avg_status": "Above",
+    "200_day_rolling_avg_status": "Above"
+}
+```
 
 
 ## Conclusions:
 This is just a high-level overview of the code that could be used for each stage of the pipeline.
-
- **The input data format of the code is a stock symbol passed as a URL parameter in the API endpoint. For example, if you make a GET request to the endpoint /rolling_avg/AAPL, the stock symbol AAPL is passed to the function get_rolling_avg as an argument.** 
-
-The code then retrieves the rolling averages for the specified stock symbol from the database and returns it as a JSON response. 
-
- **The output of this code would be a  JSON response  that contains the rolling average of a given stock. The response includes the stock symbol, 20-day rolling average, 50-day rolling average, and 200-day rolling average. The JSON response is returned from the get_rolling_average function when the API endpoint "/rolling_average/<symbol>" is called with a GET request, where <symbol> is the stock symbol you want to retrieve the rolling average for.**
